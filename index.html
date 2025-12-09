@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>洛克王国 - 宠物图鉴</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  
+  <!-- 配置Tailwind自定义主题 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#7B61FF',
+            fire: '#FF6B35',
+            water: '#35A7FF',
+            grass: '#36B37E',
+            electric: '#FFD600',
+            ice: '#64D2FF',
+            martial: '#FF5630',
+            poison: '#A335EE',
+            earth: '#9E7C14',
+            wing: '#00B8D9',
+            cute: '#FF568B',
+            insect: '#899300',
+            stone: '#8B7765',
+            ghost: '#6554C0',
+            dragon: '#0076D1',
+            devil: '#5E2BFF',
+            mechanical: '#6B778C',
+            light: '#FFDD00',
+            normal: '#9DA0AA',
+            godgrass: '#26C6DA'
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .pet-card-gradient {
+        background: linear-gradient(135deg, var(--tw-gradient-from) 0%, var(--tw-gradient-to) 100%);
+      }
+      .text-shadow {
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      .card-hover {
+        transition: all 0.3s ease;
+      }
+      .card-hover:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 20px rgba(0,0,0,0.1);
+      }
+      .filter-btn {
+        transition: all 0.2s ease;
+      }
+      .filter-btn:hover {
+        transform: translateY(-2px);
+      }
+      .filter-btn.active {
+        box-shadow: 0 0 0 2px white, 0 0 0 4px currentColor;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800">
+  <!-- 导航栏 -->
+  <header class="sticky top-0 z-50 bg-white shadow-sm transition-all duration-300" id="navbar">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-2">
+        <img src="https://tse3-mm.cn.bing.net/th/id/OIP-C.jC_LHaOlSGAY6IZ4eY5ySgHaGM?w=211&h=180&c=7&r=0&o=7&dpr=1.5&pid=1.7&rm=3" alt="洛克王国" class="w-10 h-10 rounded-full">
+        <h1 class="text-2xl font-bold text-primary">洛克王国</h1>
+      </div>
+      
+      <nav class="hidden md:flex items-center space-x-6">
+        <a href="#" class="text-primary font-medium border-b-2 border-primary pb-1">宠物图鉴</a>
+        <a href="#" class="text-gray-600 hover:text-primary transition-colors">宠物技能</a>
+        <a href="#" class="text-gray-600 hover:text-primary transition-colors">战斗攻略</a>
+        <a href="#" class="text-gray-600 hover:text-primary transition-colors">游戏资讯</a>
+      </nav>
+      
+      <button class="md:hidden text-gray-600" id="mobile-menu-button">
+        <i class="fa fa-bars text-xl"></i>
+      </button>
+    </div>
+    
+    <!-- 移动端菜单 -->
+    <div class="md:hidden hidden bg-white border-t" id="mobile-menu">
+      <div class="container mx-auto px-4 py-2 flex flex-col space-y-3">
+        <a href="#" class="py-2 text-primary font-medium">宠物图鉴</a>
+        <a href="#" class="py-2 text-gray-600 hover:text-primary transition-colors">宠物技能</a>
+        <a href="#" class="py-2 text-gray-600 hover:text-primary transition-colors">战斗攻略</a>
+        <a href="#" class="py-2 text-gray-600 hover:text-primary transition-colors">游戏资讯</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-8">
+    <!-- 页面标题和筛选区 -->
+    <div class="mb-8">
+      <h2 class="text-3xl font-bold mb-6 text-shadow">宠物图鉴</h2>
+      
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div class="relative w-full md:w-64">
+          <input type="text" id="search-input" placeholder="搜索宠物..." 
+                 class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+          <i class="fa fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+        </div>
+        
+        <div class="flex flex-wrap gap-2 w-full md:w-auto justify-start md:justify-end">
+          <button id="magic-filter" class="filter-btn bg-white border border-gray-300 rounded-lg px-4 py-2 flex items-center gap-2 hover:border-primary hover:text-primary">
+            <i class="fa fa-star text-yellow-400"></i>
+            <span>魔力值宠物</span>
+          </button>
+          
+          <div class="relative">
+            <select id="sort-select" class="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+              <option value="id-asc">按编号: 从小到大</option>
+              <option value="id-desc">按编号: 从大到小</option>
+              <option value="power-asc">按魔力值: 从低到高</option>
+              <option value="power-desc">按魔力值: 从高到低</option>
+              <option value="sum-asc">按总和: 从低到高</option>
+              <option value="sum-desc">按总和: 从高到低</option>
+            </select>
+            <i class="fa fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 属性筛选标签 -->
+      <div class="flex flex-wrap gap-2 mb-8">
+        <button class="filter-btn active bg-primary text-white rounded-full px-4 py-2 text-sm" data-type="all">全部</button>
+        <button class="filter-btn bg-fire text-white rounded-full px-4 py-2 text-sm" data-type="fire">火系</button>
+        <button class="filter-btn bg-water text-white rounded-full px-4 py-2 text-sm" data-type="water">水系</button>
+        <button class="filter-btn bg-grass text-white rounded-full px-4 py-2 text-sm" data-type="grass">草系</button>
+        <button class="filter-btn bg-electric text-white rounded-full px-4 py-2 text-sm" data-type="electric">电系</button>
+        <button class="filter-btn bg-ice text-white rounded-full px-4 py-2 text-sm" data-type="ice">冰系</button>
+        <button class="filter-btn bg-martial text-white rounded-full px-4 py-2 text-sm" data-type="martial">武系</button>
+        <button class="filter-btn bg-poison text-white rounded-full px-4 py-2 text-sm" data-type="poison">毒系</button>
+        <button class="filter-btn bg-earth text-white rounded-full px-4 py-2 text-sm" data-type="earth">土系</button>
+        <button class="filter-btn bg-wing text-white rounded-full px-4 py-2 text-sm" data-type="wing">翼系</button>
+        <button class="filter-btn bg-cute text-white rounded-full px-4 py-2 text-sm" data-type="cute">萌系</button>
+        <button class="filter-btn bg-insect text-white rounded-full px-4 py-2 text-sm" data-type="insect">虫系</button>
+        <button class="filter-btn bg-stone text-white rounded-full px-4 py-2 text-sm" data-type="stone">石系</button>
+        <button class="filter-btn bg-ghost text-white rounded-full px-4 py-2 text-sm" data-type="ghost">幽灵系</button>
+        <button class="filter-btn bg-dragon text-white rounded-full px-4 py-2 text-sm" data-type="dragon">龙系</button>
+        <button class="filter-btn bg-devil text-white rounded-full px-4 py-2 text-sm" data-type="devil">恶魔系</button>
+        <button class="filter-btn bg-mechanical text-white rounded-full px-4 py-2 text-sm" data-type="mechanical">机械系</button>
+        <button class="filter-btn bg-light text-white rounded-full px-4 py-2 text-sm" data-type="light">光系</button>
+        <button class="filter-btn bg-normal text-white rounded-full px-4 py-2 text-sm" data-type="normal">普通系</button>
+        <button class="filter-btn bg-godgrass text-white rounded-full px-4 py-2 text-sm" data-type="godgrass">神草系</button>
+      </div>
+    </div>
+    
+    <!-- 宠物卡片网格 -->
+    <div id="pets-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+      <!-- 宠物卡片将通过JavaScript动态生成 -->
+      <div class="col-span-full text-center py-12">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <p class="mt-4 text-gray-500">加载宠物数据中...</p>
+      </div>
+    </div>
+    
+    <!-- 空状态显示 -->
+    <div id="empty-state" class="hidden col-span-full text-center py-16">
+      <img src="https://picsum.photos/120/120" alt="没有找到宠物" class="mx-auto w-32 h-32 opacity-30 mb-4">
+      <h3 class="text-xl font-medium text-gray-500">没有找到符合条件的宠物</h3>
+      <p class="text-gray-400 mt-2">请尝试其他搜索条件或筛选条件</p>
+    </div>
+  </main>
+
+  <!-- 宠物详情模态框 -->
+  <div id="pet-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" id="modal-backdrop"></div>
+    <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto transform transition-all scale-95 opacity-0" id="modal-content">
+      <button id="close-modal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 z-10 bg-white/80 rounded-full w-8 h-8 flex items-center justify-center backdrop-blur-sm">
+        <i class="fa fa-times"></i>
+      </button>
+      
+      <div class="p-6 md:p-8" id="modal-body">
+        <!-- 模态框内容将通过JavaScript动态生成 -->
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-gray-800 text-white mt-16">
+    <div class="container mx-auto px-4 py-10">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div class="mb-6 md:mb-0">
+          <div class="flex items-center space-x-2">
+            <img src="https://picsum.photos/40/40" alt="洛克王国" class="w-8 h-8 rounded-full">
+            <span class="text-lg font-bold">洛克王国</span>
+          </div>
+          <p class="text-gray-400 text-sm mt-2">宠物图鉴 - 探索洛克王国的奇妙生物</p>
+        </div>
+        
+        <div class="flex space-x-6">
+          <a href="#" class="text-gray-400 hover:text-white transition-colors"><i class="fa fa-weibo text-xl"></i></a>
+          <a href="#" class="text-gray-400 hover:text-white transition-colors"><i class="fa fa-wechat text-xl"></i></a>
+          <a href="#" class="text-gray-400 hover:text-white transition-colors"><i class="fa fa-qq text-xl"></i></a>
+        </div>
+      </div>
+      
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400 text-sm">
+        <p>© 2023 洛克王国 版权所有</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // 全局变量
+    let petsData = [];
+    let filteredPets = [];
+    let currentFilter = 'all';
+    let magicFilterActive = false;
+    let searchQuery = '';
+    let sortOrder = 'id-asc';
+    
+    // DOM 元素
+    const petsGrid = document.getElementById('pets-grid');
+    const emptyState = document.getElementById('empty-state');
+    const searchInput = document.getElementById('search-input');
+    const magicFilterBtn = document.getElementById('magic-filter');
+    const sortSelect = document.getElementById('sort-select');
+    const filterButtons = document.querySelectorAll('.filter-btn[data-type]');
+    const navbar = document.getElementById('navbar');
+    const mobileMenuButton = document.getElementById('mobile-menu-button');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const petModal = document.getElementById('pet-modal');
+    const modalContent = document.getElementById('modal-content');
+    const modalBackdrop = document.getElementById('modal-backdrop');
+    const closeModal = document.getElementById('close-modal');
+    const modalBody = document.getElementById('modal-body');
+    
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      // 加载宠物数据
+      loadPetsData();
+      
+      // 事件监听
+      setupEventListeners();
+    });
+    
+    // 加载宠物数据
+    function loadPetsData() {
+      Papa.parse('pet.csv', {
+        download: true,
+        header: true,
+        complete: (result) => {
+          petsData = result.data.map(pet => {
+            // 转换数值类型
+            return {
+              ...pet,
+              id: parseInt(pet.编号),
+              magic: parseInt(pet.魔力值),
+              energy: parseInt(pet.精力),
+             物攻: parseInt(pet.物攻),
+              防御: parseInt(pet.防御),
+              魔攻: parseInt(pet.魔攻),
+              魔抗: parseInt(pet.魔抗),
+              速度: parseInt(pet.速度),
+              总和: parseInt(pet.总和)
+            };
+          });
+          
+          // 初始渲染
+          filteredPets = [...petsData];
+          renderPets();
+        },
+        error: (error) => {
+          console.error('加载宠物数据失败:', error);
+          petsGrid.innerHTML = `
+            <div class="col-span-full text-center py-12">
+              <p class="text-red-500">加载宠物数据失败，请稍后重试</p>
+            </div>
+          `;
+        }
+      });
+    }
+    
+    // 设置事件监听
+    function setupEventListeners() {
+      // 搜索输入
+      searchInput.addEventListener('input', (e) => {
+        searchQuery = e.target.value.trim().toLowerCase();
+        applyFilters();
+      });
+      
+      // 魔力值筛选
+      magicFilterBtn.addEventListener('click', () => {
+        magicFilterActive = !magicFilterActive;
+        magicFilterBtn.classList.toggle('bg-primary');
+        magicFilterBtn.classList.toggle('text-white');
+        magicFilterBtn.classList.toggle('border-primary');
+        applyFilters();
+      });
+      
+      // 排序选择
+      sortSelect.addEventListener('change', (e) => {
+        sortOrder = e.target.value;
+        applyFilters();
+      });
+      
+      // 属性筛选
+      filterButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          // 更新活跃状态
+          filterButtons.forEach(btn => btn.classList.remove('active'));
+          button.classList.add('active');
+          
+          currentFilter = button.dataset.type;
+          applyFilters();
+        });
+      });
+      
+      // 移动端菜单
+      mobileMenuButton.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+      });
+      
+      // 滚动时导航栏效果
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 50) {
+          navbar.classList.add('py-2', 'shadow');
+          navbar.classList.remove('py-3', 'shadow-sm');
+        } else {
+          navbar.classList.add('py-3', 'shadow-sm');
+          navbar.classList.remove('py-2', 'shadow');
+        }
+      });
+      
+      // 模态框控制
+      closeModal.addEventListener('click', closePetModal);
+      modalBackdrop.addEventListener('click', closePetModal);
+      
+      // 键盘ESC关闭模态框
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !petModal.classList.contains('hidden')) {
+          closePetModal();
+        }
+      });
+    }
+    
+    // 应用所有筛选条件
+    function applyFilters() {
+      let result = [...petsData];
+      
+      // 搜索筛选
+      if (searchQuery) {
+        result = result.filter(pet => 
+          pet.名称.toLowerCase().includes(searchQuery) || 
+          pet.简介.toLowerCase().includes(searchQuery)
+        );
+      }
+      
+      // 属性筛选
+      if (currentFilter !== 'all') {
+        // 映射前端类型到CSV中的属性值
+        const typeMap = {
+          'fire': '火',
+          'water': '水',
+          'grass': '草',
+          'electric': '电',
+          'ice': '冰',
+          'martial': '武',
+          'poison': '毒',
+          'earth': '土',
+          'wing': '翼',
+          'cute': '萌',
+          'insect': '虫',
+          'stone': '石',
+          'ghost': '幽灵',
+          'dragon': '龙',
+          'devil': '恶魔',
+          'mechanical': '机械',
+          'light': '光',
+          'normal': '普通',
+          'godgrass': '神草'
+        };
+        
+        const targetType = typeMap[currentFilter];
+        result = result.filter(pet => pet.主 === targetType || pet.副 === targetType);
+      }
+      
+      // 魔力值筛选
+      if (magicFilterActive) {
+        result = result.filter(pet => pet.magic > 0);
+      }
+      
+      // 排序
+      result.sort((a, b) => {
+        switch (sortOrder) {
+          case 'id-asc':
+            return a.id - b.id;
+          case 'id-desc':
+            return b.id - a.id;
+          case 'power-asc':
+            return a.magic - b.magic;
+          case 'power-desc':
+            return b.magic - a.magic;
+          case 'sum-asc':
+            return a.总和 - b.总和;
+          case 'sum-desc':
+            return b.总和 - a.总和;
+          default:
+            return a.id - b.id;
+        }
+      });
+      
+      filteredPets = result;
+      renderPets();
+    }
+    
+    // 渲染宠物卡片
+    function renderPets() {
+      if (filteredPets.length === 0) {
+        petsGrid.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      
+      emptyState.classList.add('hidden');
+      petsGrid.innerHTML = '';
+      
+      filteredPets.forEach(pet => {
+        const card = createPetCard(pet);
+        petsGrid.appendChild(card);
+      });
+    }
+    
+    // 创建宠物卡片
+    function createPetCard(pet) {
+      const card = document.createElement('div');
+      card.className = 'bg-white rounded-xl shadow-md overflow-hidden card-hover';
+      
+      // 确定主属性对应的颜色类
+      const typeColorMap = {
+        '火': 'fire',
+        '水': 'water',
+        '草': 'grass',
+        '电': 'electric',
+        '冰': 'ice',
+        '武': 'martial',
+        '毒': 'poison',
+        '土': 'earth',
+        '翼': 'wing',
+        '萌': 'cute',
+        '虫': 'insect',
+        '石': 'stone',
+        '幽灵': 'ghost',
+        '龙': 'dragon',
+        '恶魔': 'devil',
+        '机械': 'mechanical',
+        '光': 'light',
+        '普通': 'normal',
+        '神草': 'godgrass'
+      };
+      
+      const mainType = pet.主 || 'normal';
+      const mainTypeColor = typeColorMap[mainType] || 'normal';
+      
+      // 宠物图片URL
+      let imageUrl = `https://res.17roco.qq.com/webapp/rocoBox/preview/${pet.id}.png`;
+      if (pet.id === 0) {
+        imageUrl = 'pet-images/0.png';
+      }
+      
+      // 构建卡片HTML
+      card.innerHTML = `
+        <div class="relative h-48 overflow-hidden bg-gradient-to-b from-${mainTypeColor}/10 to-white">
+          <button class="absolute top-3 left-3 w-7 h-7 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center text-gray-500 hover:text-red-500 transition-colors">
+            <i class="fa fa-heart-o"></i>
+          </button>
+          
+          <img src="${imageUrl}" alt="${pet.名称}" class="w-full h-full object-contain object-center transform transition-transform hover:scale-110 duration-500">
+          
+          <div class="absolute top-3 right-3 flex flex-wrap gap-1">
+            <span class="bg-${mainTypeColor} text-white text-xs px-2 py-1 rounded-full">${pet.主}系</span>
+            ${pet.副 ? `<span class="bg-${typeColorMap[pet.副] || 'normal'} text-white text-xs px-2 py-1 rounded-full">${pet.副}系</span>` : ''}
+          </div>
+        </div>
+        
+        <div class="p-4">
+          <div class="flex justify-between items-start mb-2">
+            <h3 class="font-bold text-lg">${pet.名称}</h3>
+            <div class="flex">
+              ${Array.from({length: 5}).map((_, i) => 
+                i < pet.magic ? `<i class="fa fa-star text-yellow-400"></i>` : `<i class="fa fa-star-o text-gray-300"></i>`
+              ).join('')}
+            </div>
+          </div>
+          
+          <p class="text-gray-500 text-sm mb-3">编号: ${pet.id}</p>
+          <p class="text-gray-600 text-sm mb-4 line-clamp-2">${pet.简介 || '暂无介绍'}</p>
+          
+          <div class="flex justify-between items-center">
+            <span class="text-gray-500 text-sm">种族值: ${pet.总和}</span>
+            <button class="view-details bg-primary text-white px-3 py-1.5 rounded-lg text-sm hover:bg-primary/90 transition-colors" data-id="${pet.id}">
+              查看详情
+            </button>
+          </div>
+        </div>
+      `;
+      
+      // 添加点击事件查看详情
+      card.querySelector('.view-details').addEventListener('click', () => {
+        openPetModal(pet);
+      });
+      
+      return card;
+    }
+    
+    // 打开宠物详情模态框
+    function openPetModal(pet) {
+      // 构建模态框内容
+      const typeColorMap = {
+        '火': 'fire',
+        '水': 'water',
+        '草': 'grass',
+        '电': 'electric',
+        '冰': 'ice',
+        '武': 'martial',
+        '毒': 'poison',
+        '土': 'earth',
+        '翼': 'wing',
+        '萌': 'cute',
+        '虫': 'insect',
+        '石': 'stone',
+        '幽灵': 'ghost',
+        '龙': 'dragon',
+        '恶魔': 'devil',
+        '机械': 'mechanical',
+        '光': 'light',
+        '普通': 'normal',
+        '神草': 'godgrass'
+      };
+      
+      const mainType = pet.主 || 'normal';
+      const mainTypeColor = typeColorMap[mainType] || 'normal';
+      
+      // 宠物图片URL
+      let imageUrl = `https://res.17roco.qq.com/webapp/rocoBox/preview/${pet.id}.png`;
+      if (pet.id === 0) {
+        imageUrl = 'pet-images/0.png';
+      }
+      
+      modalBody.innerHTML = `
+        <div class="flex flex-col md:flex-row gap-6">
+          <!-- 左侧: 宠物图片和基本信息 -->
+          <div class="md:w-1/3">
+            <div class="bg-gradient-to-b from-${mainTypeColor}/20 to-white rounded-xl p-4 mb-4 text-center">
+              <img src="${imageUrl}" alt="${pet.名称}" class="w-full max-w-xs mx-auto h-64 object-contain">
+              <h2 class="text-2xl font-bold mt-4">${pet.名称}</h2>
+              <p class="text-gray-500">编号: ${pet.id}</p>
+              
+              <div class="flex justify-center gap-2 mt-3">
+                <span class="bg-${mainTypeColor} text-white text-sm px-3 py-1 rounded-full">${pet.主}系</span>
+                ${pet.副 ? `<span class="bg-${typeColorMap[pet.副] || 'normal'} text-white text-sm px-3 py-1 rounded-full">${pet.副}系</span>` : ''}
+              </div>
+              
+              <div class="flex justify-center mt-2">
+                ${Array.from({length: 5}).map((_, i) => 
+                  i < pet.magic ? `<i class="fa fa-star text-yellow-400 text-lg"></i>` : `<i class="fa fa-star-o text-gray-300 text-lg"></i>`
+                ).join('')}
+              </div>
+            </div>
+            
+            <div class="bg-gray-50 rounded-xl p-4">
+              <h3 class="font-semibold mb-3">基本信息</h3>
+              <div class="space-y-2 text-sm">
+                <p><span class="text-gray-500">组别:</span> ${pet.组别 || '未知'}</p>
+                <p><span class="text-gray-500">魔力值:</span> ${pet.magic}</p>
+                <p><span class="text-gray-500">种族值总和:</span> ${pet.总和}</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 右侧: 详细信息 -->
+          <div class="md:w-2/3">
+            <div class="bg-gray-50 rounded-xl p-4 mb-6">
+              <h3 class="font-semibold mb-3">宠物介绍</h3>
+              <p class="text-gray-700">${pet.简介 || '暂无详细介绍'}</p>
+            </div>
+            
+            <div class="bg-gray-50 rounded-xl p-4 mb-6">
+              <h3 class="font-semibold mb-4">种族值详情</h3>
+              
+              <!-- 种族值图表 -->
+              <div class="h-64 mb-6">
+                <canvas id="stats-chart"></canvas>
+              </div>
+              
+              <!-- 种族值表格 -->
+              <div class="grid grid-cols-3 sm:grid-cols-4 gap-3 text-sm">
+                <div class="bg-white rounded-lg p-3 text-center">
+                  <p class="text-gray-500">精力</p>
+                  <p class="font-medium">${pet.精力}</p>
+                </div>
+                <div class="bg-white rounded-lg p-3 text-center">
+                  <p class="text-gray-500">物攻</p>
+                  <p class="font-medium">${pet.物攻}</p>
+                </div>
+                <div class="bg-white rounded-lg p-3 text-center">
+                  <p class="text-gray-500">防御</p>
+                  <p class="font-medium">${pet.防御}</p>
+                </div>
+                <div class="bg-white rounded-lg p-3 text-center">
+                  <p class="text-gray-500">魔攻</p>
+                  <p class="font-medium">${pet.魔攻}</p>
+                </div>
+                <div class="bg-white rounded-lg p-3 text-center">
+                  <p class="text-gray-500">魔抗</p>
+                  <p class="font-medium">${pet.魔抗}</p>
+                </div>
+                <div class="bg-white rounded-lg p-3 text-center">
+                  <p class="text-gray-500">速度</p>
+                  <p class="font-medium">${pet.速度}</p>
+                </div>
+                <div class="bg-white rounded-lg p-3 text-center col-span-3 sm:col-span-1">
+                  <p class="text-gray-500">总和</p>
+                  <p class="font-medium">${pet.总和}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="flex justify-end">
+              <button class="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg transition-colors">
+                <i class="fa fa-plus mr-2"></i>加入战队
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // 创建种族值图表
+      setTimeout(() => {
+        const ctx = document.getElementById('stats-chart').getContext('2d');
+        new Chart(ctx, {
+          type: 'radar',
+          data: {
+            labels: ['精力', '物攻', '防御', '魔攻', '魔抗', '速度'],
+            datasets: [{
+              label: '种族值',
+              data: [pet.精力, pet.物攻, pet.防御, pet.魔攻, pet.魔抗, pet.速度],
+              backgroundColor: `rgba(var(--${mainTypeColor}-rgb), 0.2)`,
+              borderColor: `rgb(var(--${mainTypeColor}-rgb))`,
+              pointBackgroundColor: `rgb(var(--${mainTypeColor}-rgb))`,
+              pointBorderColor: '#fff',
+              pointHoverBackgroundColor: '#fff',
+              pointHoverBorderColor: `rgb(var(--${mainTypeColor}-rgb))`
+            }]
+          },
+          options: {
+            scales: {
+              r: {
+                beginAtZero: true,
+                max: 120,
+                ticks: {
+                  stepSize: 20
+                }
+              }
+            }
+          }
+        });
+      }, 100);
+      
+      // 显示模态框并添加动画
+      petModal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden'; // 防止背景滚动
+      
+      // 触发动画
+      setTimeout(() => {
+        modalContent.classList.remove('scale-95', 'opacity-0');
+        modalContent.classList.add('scale-100', 'opacity-100');
+      }, 10);
+    }
+    
+    // 关闭宠物详情模态框
+    function closePetModal() {
+      modalContent.classList.remove('scale-100', 'opacity-100');
+      modalContent.classList.add('scale-95', 'opacity-0');
+      
+      setTimeout(() => {
+        petModal.classList.add('hidden');
+        document.body.style.overflow = ''; // 恢复背景滚动
+      }, 300);
+    }
+  </script>
+</body>
+</html>
