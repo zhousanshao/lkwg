@@ -136,6 +136,14 @@
             <i class="fa fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
           </div>
         </div>
+        <!-- 我的战队顶部快捷显示 -->
+        <div class="w-full flex justify-end mt-3 md:mt-0">
+          <div id="team-summary" class="text-sm text-white bg-primary/90 rounded-full px-3 py-1 flex items-center gap-3">
+            <span id="team-count">队伍 0/6</span>
+            <span id="team-magic">魔力: 0</span>
+            <button id="team-toggle" class="bg-white/20 hover:bg-white/30 rounded px-2 py-1 text-xs">查看</button>
+          </div>
+        </div>
       </div>
       
       <!-- 属性筛选标签 -->
@@ -205,7 +213,7 @@
           <p class="text-gray-400 text-sm mt-2">宠物图鉴 - 探索洛克王国的奇妙生物</p>
         </div>
         
-        <div class="flex space-x-6">
+        <div class="flex items-center space-x-4">
           <a href="#" class="text-gray-400 hover:text-white transition-colors"><i class="fa fa-weibo text-xl"></i></a>
           <a href="#" class="text-gray-400 hover:text-white transition-colors"><i class="fa fa-wechat text-xl"></i></a>
           <a href="#" class="text-gray-400 hover:text-white transition-colors"><i class="fa fa-qq text-xl"></i></a>
@@ -218,6 +226,26 @@
     </div>
   </footer>
 
+  <!-- 战队面板（右下） -->
+  <div id="team-panel" class="fixed right-6 bottom-6 w-72 bg-white rounded-xl shadow-lg p-3 z-50 hidden">
+    <div class="flex justify-between items-center mb-2">
+      <h4 class="font-semibold">我的战队 <span id="panel-count" class="text-gray-500">(0/6)</span></h4>
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-gray-600">魔力：</span>
+        <span id="panel-magic" class="font-medium">0</span>
+      </div>
+    </div>
+
+    <div id="team-list" class="grid grid-cols-3 gap-2 mb-3">
+      <!-- 缩略图将由JS渲染 -->
+    </div>
+
+    <div class="flex justify-between">
+      <button id="clear-team" class="text-sm text-red-500 hover:underline">清空</button>
+      <button id="close-team" class="text-sm text-gray-600 hover:underline">关闭</button>
+    </div>
+  </div>
+
   <script>
     // 全局变量
     let petsData = [];
@@ -226,6 +254,20 @@
     let magicFilterActive = false;
     let searchQuery = '';
     let sortOrder = 'id-asc';
+    // 我的战队数据
+    let myTeam = [];
+    const maxTeamSize = 6;
+    let modalChart = null;
+    // 类型图标与映射（用于卡片与筛选按钮）
+    const typeIconMap = {
+      '火': '🔥', '水': '💧', '草': '🍃', '电': '⚡', '冰': '❄️', '武': '🥋', '毒': '☠️', '土': '🌍', '翼': '🐦', '萌': '😻',
+      '虫': '🐞', '石': '🪨', '幽灵': '👻', '龙': '🐉', '恶魔': '😈', '机械': '⚙️', '光': '💡', '普通': '⭐', '神草': '🌿'
+    };
+    const dataTypeToChinese = {
+      'fire': '火', 'water': '水', 'grass': '草', 'electric': '电', 'ice': '冰', 'martial': '武', 'poison': '毒',
+      'earth': '土', 'wing': '翼', 'cute': '萌', 'insect': '虫', 'stone': '石', 'ghost': '幽灵', 'dragon': '龙',
+      'devil': '恶魔', 'mechanical': '机械', 'light': '光', 'normal': '普通', 'godgrass': '神草'
+    };
     
     // DOM 元素
     const petsGrid = document.getElementById('pets-grid');
@@ -242,6 +284,16 @@
     const modalBackdrop = document.getElementById('modal-backdrop');
     const closeModal = document.getElementById('close-modal');
     const modalBody = document.getElementById('modal-body');
+    const teamSummary = document.getElementById('team-summary');
+    const teamCountEl = document.getElementById('team-count');
+    const teamMagicEl = document.getElementById('team-magic');
+    const teamPanel = document.getElementById('team-panel');
+    const teamListEl = document.getElementById('team-list');
+    const panelCount = document.getElementById('panel-count');
+    const panelMagic = document.getElementById('panel-magic');
+    const teamToggle = document.getElementById('team-toggle');
+    const clearTeamBtn = document.getElementById('clear-team');
+    const closeTeamBtn = document.getElementById('close-team');
     
     // 初始化
     document.addEventListener('DOMContentLoaded', () => {
@@ -258,19 +310,29 @@
         download: true,
         header: true,
         complete: (result) => {
+          // 辅助：把可能的字符串数值转换为 Number，处理千位分隔符和空值
+          const toNum = (v) => {
+            if (v === null || v === undefined) return 0;
+            const s = String(v).replace(/[,\s]/g, '').trim();
+            const n = Number(s);
+            return Number.isFinite(n) ? n : 0;
+          };
+
           petsData = result.data.map(pet => {
-            // 转换数值类型
             return {
               ...pet,
-              id: parseFloat(pet.编号),
-              magic: parseInt(pet.魔力值),
-              energy: parseInt(pet.精力),
-             物攻: parseInt(pet.物攻),
-              防御: parseInt(pet.防御),
-              魔攻: parseInt(pet.魔攻),
-              魔抗: parseInt(pet.魔抗),
-              速度: parseInt(pet.速度),
-              总和: parseInt(pet.总和)
+              id: (() => { const n = Number(String(pet.编号||'').trim()); return Number.isFinite(n)? n : 0; })(),
+              魔力值: toNum(pet['魔力值']),
+              魔力: toNum(pet['魔力值']),
+              magic: toNum(pet['魔力值']),
+              精力: toNum(pet['精力']),
+              energy: toNum(pet['精力']),
+              物攻: toNum(pet['物攻']),
+              防御: toNum(pet['防御']),
+              魔攻: toNum(pet['魔攻']),
+              魔抗: toNum(pet['魔抗']),
+              速度: toNum(pet['速度']),
+              总和: toNum(pet['总和'])
             };
           });
           
@@ -323,6 +385,19 @@
           applyFilters();
         });
       });
+
+      // 在筛选按钮上渲染图标
+      filterButtons.forEach(btn => {
+        const dtype = btn.dataset.type;
+        const chi = dataTypeToChinese[dtype];
+        if (chi && typeIconMap[chi]) {
+          // 在文字前插入图标小标签
+          const iconSpan = document.createElement('span');
+          iconSpan.className = 'mr-2';
+          iconSpan.textContent = typeIconMap[chi];
+          btn.prepend(iconSpan);
+        }
+      });
       
       // 移动端菜单
       mobileMenuButton.addEventListener('click', () => {
@@ -343,6 +418,17 @@
       // 模态框控制
       closeModal.addEventListener('click', closePetModal);
       modalBackdrop.addEventListener('click', closePetModal);
+      // 战队面板控制
+      teamToggle.addEventListener('click', () => {
+        teamPanel.classList.toggle('hidden');
+      });
+      clearTeamBtn.addEventListener('click', () => {
+        myTeam = [];
+        renderTeam();
+      });
+      closeTeamBtn.addEventListener('click', () => teamPanel.classList.add('hidden'));
+      // 初始渲染战队
+      renderTeam();
       
       // 键盘ESC关闭模态框
       document.addEventListener('keydown', (e) => {
@@ -438,6 +524,44 @@
         petsGrid.appendChild(card);
       });
     }
+
+    // 渲染我的战队面板和摘要
+    function renderTeam() {
+      // 更新顶部摘要
+      teamCountEl.textContent = `队伍 ${myTeam.length}/${maxTeamSize}`;
+      const totalMagic = myTeam.reduce((s, p) => s + (Number(p.magic) || 0), 0);
+      teamMagicEl.textContent = `魔力: ${totalMagic}`;
+
+      // 面板内部
+      panelCount.textContent = `(${myTeam.length}/${maxTeamSize})`;
+      panelMagic.textContent = String(totalMagic);
+      teamListEl.innerHTML = '';
+
+      myTeam.forEach(p => {
+        const item = document.createElement('div');
+        item.className = 'relative bg-gray-50 rounded p-1 flex flex-col items-center text-xs';
+        const img = document.createElement('img');
+        let imageUrl = `https://res.17roco.qq.com/webapp/rocoBox/preview/${p.id}.png`;
+        if (p.id === 0.5) imageUrl = 'pet-images/0.5.png';
+        if (p.id === 0) imageUrl = 'pet-images/0.png';
+        img.src = imageUrl;
+        img.className = 'w-16 h-16 object-contain';
+        const name = document.createElement('div');
+        name.className = 'text-center text-xs mt-1';
+        name.textContent = p.名称 || '';
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'absolute top-0 right-0 text-red-500 text-xs';
+        removeBtn.textContent = '×';
+        removeBtn.addEventListener('click', () => {
+          myTeam = myTeam.filter(t => String(t.id) !== String(p.id));
+          renderTeam();
+        });
+        item.appendChild(img);
+        item.appendChild(name);
+        item.appendChild(removeBtn);
+        teamListEl.appendChild(item);
+      });
+    }
     
     // 创建宠物卡片
     function createPetCard(pet) {
@@ -466,6 +590,11 @@
         '普通': 'normal',
         '神草': 'godgrass'
       };
+      // 类型图标映射（可替换为更合适的图标）
+      const typeIconMap = {
+        '火': '🔥', '水': '💧', '草': '🍃', '电': '⚡', '冰': '❄️', '武': '🥋', '毒': '☠️', '土': '🌍', '翼': '🐦', '萌': '😻',
+        '虫': '🐞', '石': '🪨', '幽灵': '👻', '龙': '🐉', '恶魔': '😈', '机械': '⚙️', '光': '💡', '普通': '⭐', '神草': '🌿'
+      };
       
       const mainType = pet.主 || 'normal';
       const mainTypeColor = typeColorMap[mainType] || 'normal';
@@ -489,8 +618,8 @@
           <img src="${imageUrl}" alt="${pet.名称}" class="w-full h-full object-contain object-center transform transition-transform hover:scale-110 duration-500">
           
           <div class="absolute top-3 right-3 flex flex-wrap gap-1">
-            <span class="bg-${mainTypeColor} text-white text-xs px-2 py-1 rounded-full">${pet.主}系</span>
-            ${pet.副 ? `<span class="bg-${typeColorMap[pet.副] || 'normal'} text-white text-xs px-2 py-1 rounded-full">${pet.副}系</span>` : ''}
+            <span class="bg-${mainTypeColor} text-white text-xs px-2 py-1 rounded-full">${typeIconMap[pet.主] || ''} ${pet.主}系</span>
+            ${pet.副 ? `<span class="bg-${typeColorMap[pet.副] || 'normal'} text-white text-xs px-2 py-1 rounded-full">${typeIconMap[pet.副] || ''} ${pet.副}系</span>` : ''}
           </div>
         </div>
         
@@ -641,8 +770,8 @@
             </div>
             
             <div class="flex justify-end">
-              <button class="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg transition-colors">
-                <i class="fa fa-plus mr-2"></i>加入战队
+              <button id="add-team-btn" data-id="${pet.id}" class="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg transition-colors">
+                <i class="fa fa-plus mr-2"></i><span id="add-team-text">加入战队</span>
               </button>
             </div>
           </div>
@@ -652,34 +781,80 @@
       // 创建种族值图表
       setTimeout(() => {
         const ctx = document.getElementById('stats-chart').getContext('2d');
-        new Chart(ctx, {
+        // 动态计算图表最大值，基于当前宠物的属性
+        const values = [pet.精力, pet.物攻, pet.防御, pet.魔攻, pet.魔抗, pet.速度].map(v => Number(v) || 0);
+        const rawMax = Math.max(...values, 10);
+        const chartMax = Math.ceil(rawMax / 10) * 10; // 向上取整为10的倍数
+        const step = Math.ceil(chartMax / 5);
+        if (modalChart) {
+          try { modalChart.destroy(); } catch(e){}
+        }
+        modalChart = new Chart(ctx, {
           type: 'radar',
           data: {
             labels: ['精力', '物攻', '防御', '魔攻', '魔抗', '速度'],
             datasets: [{
               label: '种族值',
-              data: [pet.精力, pet.物攻, pet.防御, pet.魔攻, pet.魔抗, pet.速度],
-              backgroundColor: `rgba(var(--${mainTypeColor}-rgb), 0.2)`,
-              borderColor: `rgb(var(--${mainTypeColor}-rgb))`,
-              pointBackgroundColor: `rgb(var(--${mainTypeColor}-rgb))`,
+              data: values,
+              fill: true,
+              backgroundColor: `rgba(123,97,255, 0.22)`,
+              borderColor: `rgb(123,97,255)`,
+              borderWidth: 2,
+              tension: 0,
+              pointBackgroundColor: `rgb(123,97,255)`,
               pointBorderColor: '#fff',
               pointHoverBackgroundColor: '#fff',
-              pointHoverBorderColor: `rgb(var(--${mainTypeColor}-rgb))`
+              pointHoverBorderColor: `rgb(123,97,255)`
             }]
           },
           options: {
+            elements: {
+              line: {
+                borderWidth: 2
+              }
+            },
             scales: {
               r: {
                 beginAtZero: true,
-                max: 120,
+                max: chartMax,
                 ticks: {
-                  stepSize: 20
-                }
+                  // 隐藏径向刻度数字（避免显示不相关的数值）
+                  display: false,
+                  stepSize: step
+                },
+                angleLines: { display: true },
+                grid: { circular: false }
               }
+            },
+            plugins: {
+              legend: { display: false }
             }
           }
         });
       }, 100);
+
+      // 绑定加入战队按钮事件
+      const addBtn = modalBody.querySelector('#add-team-btn');
+      const addBtnText = modalBody.querySelector('#add-team-text');
+      const inTeam = myTeam.some(t => String(t.id) === String(pet.id));
+      if (inTeam) addBtnText.textContent = '已在战队';
+      else addBtnText.textContent = '加入战队';
+      addBtn.addEventListener('click', () => {
+        if (myTeam.some(t => String(t.id) === String(pet.id))) {
+          // 如果已存在则移除
+          myTeam = myTeam.filter(t => String(t.id) !== String(pet.id));
+        } else {
+          if (myTeam.length >= maxTeamSize) {
+            alert('最多只能选择6只宠物加入战队');
+            return;
+          }
+          myTeam.push(pet);
+        }
+        renderTeam();
+        // 更新按钮文案
+        const nowIn = myTeam.some(t => String(t.id) === String(pet.id));
+        addBtnText.textContent = nowIn ? '已在战队' : '加入战队';
+      });
       
       // 显示模态框并添加动画
       petModal.classList.remove('hidden');
