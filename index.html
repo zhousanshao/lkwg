@@ -86,8 +86,8 @@
       <nav class="hidden md:flex items-center space-x-6">
         <a href="#" class="text-primary font-medium border-b-2 border-primary pb-1">宠物图鉴</a>
         <a href="#" class="text-gray-600 hover:text-primary transition-colors">宠物技能</a>
-        <a href="#" class="text-gray-600 hover:text-primary transition-colors">战斗攻略</a>
-        <a href="#" class="text-gray-600 hover:text-primary transition-colors">游戏资讯</a>
+        <a href="#" id="game-guide-link" class="text-gray-600 hover:text-primary transition-colors">游戏攻略</a>
+        <a href="#" id="events-link" class="text-gray-600 hover:text-primary transition-colors">游戏资讯</a>
       </nav>
       
       <button class="md:hidden text-gray-600" id="mobile-menu-button">
@@ -100,8 +100,8 @@
       <div class="container mx-auto px-4 py-2 flex flex-col space-y-3">
         <a href="#" class="py-2 text-primary font-medium">宠物图鉴</a>
         <a href="#" class="py-2 text-gray-600 hover:text-primary transition-colors">宠物技能</a>
-        <a href="#" class="py-2 text-gray-600 hover:text-primary transition-colors">战斗攻略</a>
-        <a href="#" class="py-2 text-gray-600 hover:text-primary transition-colors">游戏资讯</a>
+        <a href="#" id="mobile-game-guide-link" class="py-2 text-gray-600 hover:text-primary transition-colors">游戏攻略</a>
+        <a href="#" id="mobile-events-link" class="py-2 text-gray-600 hover:text-primary transition-colors">游戏资讯</a>
       </div>
     </div>
   </header>
@@ -147,6 +147,19 @@
         </div>
       </div>
       
+        <!-- 游戏攻略模态框 -->
+        <div id="guide-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+          <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" id="guide-backdrop"></div>
+          <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto transform transition-all scale-95 opacity-0" id="guide-content">
+            <button id="close-guide" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 z-10 bg-white/80 rounded-full w-8 h-8 flex items-center justify-center backdrop-blur-sm">
+              <i class="fa fa-times"></i>
+            </button>
+            <div class="p-6" id="guide-body">
+              <!-- 内容通过 JS 渲染：卡片网格或分类详情 -->
+            </div>
+          </div>
+        </div>
+
       <!-- 属性筛选标签 -->
       <div class="flex flex-wrap gap-2 mb-8">
         <button class="filter-btn active bg-primary text-white rounded-full px-4 py-2 text-sm" data-type="all">全部</button>
@@ -199,6 +212,19 @@
       
       <div class="p-6 md:p-8" id="modal-body">
         <!-- 模态框内容将通过JavaScript动态生成 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 活动模态框（游戏资讯） -->
+  <div id="events-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" id="events-backdrop"></div>
+    <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto transform transition-all scale-95 opacity-0" id="events-content">
+      <button id="close-events" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 z-10 bg-white/80 rounded-full w-8 h-8 flex items-center justify-center backdrop-blur-sm">
+        <i class="fa fa-times"></i>
+      </button>
+      <div class="p-6" id="events-body">
+        <!-- 活动内容由 JS 渲染 -->
       </div>
     </div>
   </div>
@@ -426,6 +452,69 @@
       mobileMenuButton.addEventListener('click', () => {
         mobileMenu.classList.toggle('hidden');
       });
+      // 游戏攻略打开展示（桌面 & 移动）
+      const gameGuideLink = document.getElementById('game-guide-link');
+      const mobileGameGuideLink = document.getElementById('mobile-game-guide-link');
+      const guideModal = document.getElementById('guide-modal');
+      const guideBackdrop = document.getElementById('guide-backdrop');
+      const guideContent = document.getElementById('guide-content');
+      const guideBody = document.getElementById('guide-body');
+      const closeGuideBtn = document.getElementById('close-guide');
+
+      const openGuideModal = () => {
+        renderGuideCards();
+        guideModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => {
+          guideContent.classList.remove('scale-95', 'opacity-0');
+          guideContent.classList.add('scale-100', 'opacity-100');
+        }, 10);
+      };
+      const closeGuideModal = () => {
+        guideContent.classList.remove('scale-100', 'opacity-100');
+        guideContent.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => {
+          guideModal.classList.add('hidden');
+          document.body.style.overflow = '';
+        }, 300);
+      };
+
+      if (gameGuideLink) gameGuideLink.addEventListener('click', (e) => { e.preventDefault(); openGuideModal(); });
+      if (mobileGameGuideLink) mobileGameGuideLink.addEventListener('click', (e) => { e.preventDefault(); mobileMenu.classList.add('hidden'); openGuideModal(); });
+      if (closeGuideBtn) closeGuideBtn.addEventListener('click', closeGuideModal);
+      if (guideBackdrop) guideBackdrop.addEventListener('click', closeGuideModal);
+
+      // 游戏资讯（活动）打开展示
+      const eventsLink = document.getElementById('events-link');
+      const mobileEventsLink = document.getElementById('mobile-events-link');
+      const eventsModal = document.getElementById('events-modal');
+      const eventsBackdrop = document.getElementById('events-backdrop');
+      const eventsContent = document.getElementById('events-content');
+      const eventsBody = document.getElementById('events-body');
+      const closeEventsBtn = document.getElementById('close-events');
+
+      const openEventsModal = () => {
+        renderEventsCards();
+        eventsModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => {
+          eventsContent.classList.remove('scale-95', 'opacity-0');
+          eventsContent.classList.add('scale-100', 'opacity-100');
+        }, 10);
+      };
+      const closeEventsModal = () => {
+        eventsContent.classList.remove('scale-100', 'opacity-100');
+        eventsContent.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => {
+          eventsModal.classList.add('hidden');
+          document.body.style.overflow = '';
+        }, 300);
+      };
+
+      if (eventsLink) eventsLink.addEventListener('click', (e) => { e.preventDefault(); openEventsModal(); });
+      if (mobileEventsLink) mobileEventsLink.addEventListener('click', (e) => { e.preventDefault(); mobileMenu.classList.add('hidden'); openEventsModal(); });
+      if (closeEventsBtn) closeEventsBtn.addEventListener('click', closeEventsModal);
+      if (eventsBackdrop) eventsBackdrop.addEventListener('click', closeEventsModal);
       
       // 滚动时导航栏效果
       window.addEventListener('scroll', () => {
@@ -907,6 +996,216 @@
         petModal.classList.add('hidden');
         document.body.style.overflow = ''; // 恢复背景滚动
       }, 300);
+    }
+
+    // 渲染游戏攻略卡片
+    function renderGuideCards() {
+      const gb = document.getElementById('guide-body');
+      const html = `
+        <div>
+          <h2 class="text-2xl font-bold mb-4">游戏攻略</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="p-4 bg-white rounded-lg shadow flex flex-col items-start gap-3 cursor-pointer hover:shadow-md" data-cat="assist">
+              <div class="text-3xl text-primary"><i class="fa fa-wrench"></i></div>
+              <div>
+                <h3 class="font-semibold">游戏辅助</h3>
+                <p class="text-sm text-gray-500">常用辅助工具与下载链接</p>
+              </div>
+            </div>
+
+            <div class="p-4 bg-white rounded-lg shadow flex flex-col items-start gap-3 cursor-pointer hover:shadow-md" data-cat="train">
+              <div class="text-3xl text-primary"><i class="fa fa-paw"></i></div>
+              <div>
+                <h3 class="font-semibold">宠物培养</h3>
+                <p class="text-sm text-gray-500">培养建议与成长指南</p>
+              </div>
+            </div>
+
+            <div class="p-4 bg-white rounded-lg shadow flex flex-col items-start gap-3 cursor-pointer hover:shadow-md" data-cat="newbie">
+              <div class="text-3xl text-primary"><i class="fa fa-book"></i></div>
+              <div>
+                <h3 class="font-semibold">新手攻略</h3>
+                <p class="text-sm text-gray-500">快速入门与常见问题</p>
+              </div>
+            </div>
+
+            <div class="p-4 bg-white rounded-lg shadow flex flex-col items-start gap-3 cursor-pointer hover:shadow-md" data-cat="more">
+              <div class="text-3xl text-primary"><i class="fa fa-ellipsis-h"></i></div>
+              <div>
+                <h3 class="font-semibold">更多内容</h3>
+                <p class="text-sm text-gray-500">其他有趣的玩法与资源</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      gb.innerHTML = html;
+      // 为卡片绑定点击事件
+      const cards = gb.querySelectorAll('[data-cat]');
+      cards.forEach(c => c.addEventListener('click', () => {
+        const cat = c.dataset.cat;
+        showGuideCategory(cat);
+      }));
+    }
+
+    // 显示分类详情（目前实现游戏辅助两个下载链接）
+    function showGuideCategory(cat) {
+      const gb = document.getElementById('guide-body');
+      if (cat === 'assist') {
+        gb.innerHTML = `
+          <div>
+            <button id="guide-back" class="text-sm text-gray-500 mb-4 hover:underline">← 返回</button>
+            <h3 class="text-xl font-semibold mb-3">游戏辅助</h3>
+            <div class="space-y-3">
+              <a href="https://www.luokewk.com/" target="_blank" class="block p-3 bg-white rounded shadow hover:bg-gray-50">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="font-medium">悟空神辅</div>
+                    <div class="text-sm text-gray-500">下载链接</div>
+                  </div>
+                  <div class="text-primary"><i class="fa fa-download"></i></div>
+                </div>
+              </a>
+              <a href="http://luoketx.com/" target="_blank" class="block p-3 bg-white rounded shadow hover:bg-gray-50">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="font-medium">童心辅助</div>
+                    <div class="text-sm text-gray-500">下载链接</div>
+                  </div>
+                  <div class="text-primary"><i class="fa fa-download"></i></div>
+                </div>
+              </a>
+            </div>
+          </div>
+        `;
+        // 绑定返回按钮
+        const backBtn = gb.querySelector('#guide-back');
+        if (backBtn) backBtn.addEventListener('click', (e) => { e.preventDefault(); renderGuideCards(); });
+      } else {
+        // 其余分类暂时显示占位信息
+        gb.innerHTML = `
+          <div>
+            <button id="guide-back" class="text-sm text-gray-500 mb-4 hover:underline">← 返回</button>
+            <h3 class="text-xl font-semibold mb-3">${cat === 'train' ? '宠物培养' : cat === 'newbie' ? '新手攻略' : '更多内容'}</h3>
+            <p class="text-gray-600">内容正在补充中，稍后会加入更多指南。</p>
+          </div>
+        `;
+        const backBtn = gb.querySelector('#guide-back');
+        if (backBtn) backBtn.addEventListener('click', (e) => { e.preventDefault(); renderGuideCards(); });
+      }
+    }
+
+    // 渲染活动卡片（游戏资讯）
+    function renderEventsCards() {
+      const eb = document.getElementById('events-body');
+      const html = `
+        <div>
+          <h2 class="text-2xl font-bold mb-4">本期活动</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="p-4 bg-white rounded-lg shadow flex items-start gap-3 cursor-pointer" data-evt="this-week">
+              <div class="text-3xl text-primary"><i class="fa fa-calendar"></i></div>
+              <div>
+                <h3 class="font-semibold">本周活动</h3>
+                <p class="text-sm text-gray-500">查看本周进行中的活动</p>
+              </div>
+            </div>
+
+            <div class="p-4 bg-white rounded-lg shadow flex items-start gap-3 cursor-pointer" data-evt="next-week">
+              <div class="text-3xl text-primary"><i class="fa fa-calendar-o"></i></div>
+              <div>
+                <h3 class="font-semibold">下周活动</h3>
+                <p class="text-sm text-gray-500">预告下周活动安排</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      eb.innerHTML = html;
+      const cards = eb.querySelectorAll('[data-evt]');
+      cards.forEach(c => c.addEventListener('click', () => showEventsCategory(c.dataset.evt)));
+    }
+
+    // 显示活动分类详情：this-week / next-week
+    function showEventsCategory(key) {
+      const eb = document.getElementById('events-body');
+      if (key === 'this-week') {
+        eb.innerHTML = `
+          <div>
+            <button id="events-back" class="text-sm text-gray-500 mb-4 hover:underline">← 返回</button>
+            <h3 class="text-xl font-semibold mb-3">本周活动</h3>
+
+            <div class="space-y-4">
+              <div class="p-4 bg-white rounded shadow">
+                <h4 class="font-semibold">梦境编织</h4>
+                <p class="text-sm text-gray-600 mt-1">近年，洛克王国的梦境能量出现异常，许多宠物被困在混乱的噩梦之中。唯有收集破碎的梦境片段，修复梦境核心，才能安抚紊乱的能量，帮助梦魇找回真正的形态与力量。完成活动可获得宠物：梦魇。（本活动仅限VIP用户参与）</p>
+                <p class="text-sm text-gray-500 mt-2">活动时间：2025年12月26日-2026年2月5日</p>
+                <p class="text-sm text-gray-500">活动地图：迪莫的梦境</p>
+                <p class="text-sm text-gray-500">活动获得：梦魇</p>
+              </div>
+
+              <div class="p-4 bg-white rounded shadow">
+                <h4 class="font-semibold">冰火交织</h4>
+                <p class="text-sm text-gray-600 mt-1">谁说冰与火一定不相容？双头小帅就可以让冰火交织！帮助双头小帅收集足够的火能量与冰能量，完成活动还可以获得宠物：双头小帅！</p>
+                <p class="text-sm text-gray-500 mt-2">活动时间：2025年12月26日-2026年2月5日</p>
+                <p class="text-sm text-gray-500">活动地图：星之路</p>
+                <p class="text-sm text-gray-500">活动获得：双头小帅，礼遇契约*2</p>
+              </div>
+
+              <div class="p-4 bg-white rounded shadow">
+                <h4 class="font-semibold">水晶迷阵</h4>
+                <p class="text-sm text-gray-600 mt-1">混乱并非无序，是非常规的秩序。狱晶龙要从混乱的六色水晶迷阵中感悟力量，完成活动可获得宠物：狱晶龙。（本活动仅限VIP用户参与）</p>
+                <p class="text-sm text-gray-500 mt-2">活动时间：2025年12月26日-2026年2月5日</p>
+                <p class="text-sm text-gray-500">活动地图：龙守望</p>
+                <p class="text-sm text-gray-500">活动获得：狱晶龙</p>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        eb.innerHTML = `
+          <div>
+            <button id="events-back" class="text-sm text-gray-500 mb-4 hover:underline">← 返回</button>
+            <h3 class="text-xl font-semibold mb-3">下周活动</h3>
+
+            <div class="space-y-4">
+              <div class="p-4 bg-white rounded shadow">
+                <h4 class="font-semibold">节奏训练</h4>
+                <p class="text-sm text-gray-600 mt-1">跟随暮小狐的鼓点掌控节奏吧，完成训练可获得宠物：暮小狐！</p>
+                <p class="text-sm text-gray-500 mt-2">活动时间：1月2日-2月12日</p>
+                <p class="text-sm text-gray-500">活动地图：枫雪夏宫</p>
+                <p class="text-sm text-gray-500">活动获得：暮小狐，礼遇契约*2</p>
+              </div>
+
+              <div class="p-4 bg-white rounded shadow">
+                <h4 class="font-semibold">乐游牌回归</h4>
+                <p class="text-sm text-gray-600 mt-1">枫雪镇系列宠物带着乐游牌限时回归！活动期间，参与玩法获得的积分可以用来兑换宠物哦~</p>
+                <p class="text-sm text-gray-500 mt-2">活动时间：1月2日-2月12日</p>
+                <p class="text-sm text-gray-500">活动地图：乐游屋</p>
+                <p class="text-sm text-gray-500">活动获得：枫雪镇系列宠物</p>
+              </div>
+
+              <div class="p-4 bg-white rounded shadow">
+                <h4 class="font-semibold">冰莲之绊</h4>
+                <p class="text-sm text-gray-600 mt-1">为了不论何时，枫雪芙蕖都不会感到孤单，枫雪傲霜决定将最美的冰莲送给枫雪芙蕖作伴。帮助枫雪傲霜集齐冰莲，可获得枫雪傲霜，还可通过一键获得枫雪芙蕖、枫雪傲霜！</p>
+                <p class="text-sm text-gray-500 mt-2">活动时间：1月2日-1月29日</p>
+                <p class="text-sm text-gray-500">活动地图：枫雪松路</p>
+                <p class="text-sm text-gray-500">活动获得：枫雪傲霜，枫雪芙蕖</p>
+              </div>
+
+              <div class="p-4 bg-white rounded shadow">
+                <h4 class="font-semibold">冰雪签到礼</h4>
+                <p class="text-sm text-gray-600 mt-1">冰在响，雪在唱，小洛克的冬天有音乐作伴！冰雪音乐会主题外观来啦！本活动为累计签到，在活动时间内累计签到12天即可获得全部奖励噢！完成12天签到后还可领取外观：胡琴·俄尔普斯，千万不要错过哦！</p>
+                <p class="text-sm text-gray-500 mt-2">活动时间：1月2日-1月29日</p>
+                <p class="text-sm text-gray-500">活动地图：枫雪广场</p>
+                <p class="text-sm text-gray-500">活动获得：胡琴·俄尔普斯（外观），培养果实，礼遇契约等</p>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      // 绑定返回按钮
+      const backBtn = eb.querySelector('#events-back');
+      if (backBtn) backBtn.addEventListener('click', (e) => { e.preventDefault(); renderEventsCards(); });
     }
   </script>
 </body>
