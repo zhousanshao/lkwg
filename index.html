@@ -211,7 +211,7 @@
             <img src="https://picsum.photos/40/40" alt="洛克王国" class="w-8 h-8 rounded-full">
             <span class="text-lg font-bold">洛克王国</span>
           </div>
-          <p class="text-gray-400 text-sm mt-2">宠物图鉴 - 探索洛克王国的奇妙生物</p>
+          <p class="text-gray-400 text-sm mt-2">宠物图鉴 - 探索洛克王国神奇宠物</p>
         </div>
         
         <div class="flex items-center space-x-4">
@@ -222,7 +222,7 @@
       </div>
       
       <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400 text-sm">
-        <p>© 2023 洛克王国 版权所有</p>
+        <p>©2025 洛克王国 版权所有</p>
       </div>
     </div>
   </footer>
@@ -296,6 +296,26 @@
     const clearTeamBtn = document.getElementById('clear-team');
     const closeTeamBtn = document.getElementById('close-team');
     
+    // 工具：渲染星级（支持半星）
+    function renderStarsHTML(magic, sizeClass = '') {
+      const v = Number(magic) || 0;
+      let html = '';
+      for (let i = 0; i < 5; i++) {
+        if (v >= i + 1) {
+          html += `<i class="fa fa-star text-yellow-400 ${sizeClass}"></i>`;
+        } else if (v >= i + 0.5) {
+          // Font Awesome 4.7 半星使用 fa-star-half-o
+          html += `<i class="fa fa-star-half-o text-yellow-400 ${sizeClass}"></i>`;
+        } else {
+          html += `<i class="fa fa-star-o text-gray-300 ${sizeClass}"></i>`;
+        }
+      }
+      return html;
+    }
+
+    function hasSecondaryType(t) {
+      return t !== undefined && t !== null && String(t).trim() !== '' && String(t).trim() !== '无';
+    }
     // 初始化
     document.addEventListener('DOMContentLoaded', () => {
       // 加载宠物数据
@@ -335,7 +355,9 @@
               速度: toNum(pet['速度']),
               总和: toNum(pet['总和'])
             };
-          });
+          })
+          // 过滤：去掉 id 为 0 的条目以及没有名称的空行，确保只加载 CSV 中真实的宠物
+          .filter(p => (p.id && p.id !== 0) && (p.名称 && String(p.名称).trim() !== ''));
           
           // 初始渲染
           filteredPets = [...petsData];
@@ -599,9 +621,9 @@
       };
       // 类型图标映射（可替换为更合适的图标）
       const typeIconMap = {
-        '火': '🔥', '水': '💧', '草': '🍃', '电': '⚡', '冰': '❄️', '武': '🥋', '毒': '☠️', '土': '🌍', '翼': '🐦', '萌': '😻',
-        '虫': '🐞', '石': '🪨', '幽灵': '👻', '龙': '🐉', '恶魔': '😈', '机械': '⚙️', '光': '💡', '普通': '⭐', '神草': '🌿'
-      };
+      '火': '🔥', '水': '💧', '草': '🍃', '电': '⚡', '冰': '❄️', '武': '👊', '毒': '☠️', '土': '⛰️', '翼': '🌀', '萌': '💗',
+      '虫': '🐛', '石': '🪨', '幽灵': '👻', '龙': '🐉', '恶魔': '😈', '机械': '⚙️', '光': '🔅', '普通': '⭐', '神草': '🌿'
+    };
       
       const mainType = pet.主 || 'normal';
       const mainTypeColor = typeColorMap[mainType] || 'normal';
@@ -615,6 +637,12 @@
         imageUrl = 'pet-images/0.png';
       }
       
+      // 计算星级 HTML（支持半星）
+      const starHtml = renderStarsHTML(pet.magic);
+
+      // 是否显示副属性
+      const showSecondary = hasSecondaryType(pet.副);
+
       // 构建卡片HTML
       card.innerHTML = `
         <div class="relative h-48 overflow-hidden bg-gradient-to-b from-${mainTypeColor}/10 to-white">
@@ -626,7 +654,7 @@
           
           <div class="absolute top-3 right-3 flex flex-wrap gap-1">
             <span class="bg-${mainTypeColor} text-white text-xs px-2 py-1 rounded-full">${typeIconMap[pet.主] || ''} ${pet.主}系</span>
-            ${pet.副 ? `<span class="bg-${typeColorMap[pet.副] || 'normal'} text-white text-xs px-2 py-1 rounded-full">${typeIconMap[pet.副] || ''} ${pet.副}系</span>` : ''}
+            ${showSecondary ? `<span class="bg-${typeColorMap[pet.副] || 'normal'} text-white text-xs px-2 py-1 rounded-full">${typeIconMap[pet.副] || ''} ${pet.副}系</span>` : ''}
           </div>
         </div>
         
@@ -634,9 +662,7 @@
           <div class="flex justify-between items-start mb-2">
             <h3 class="font-bold text-lg">${pet.名称}</h3>
             <div class="flex">
-              ${Array.from({length: 5}).map((_, i) => 
-                i < pet.magic ? `<i class="fa fa-star text-yellow-400"></i>` : `<i class="fa fa-star-o text-gray-300"></i>`
-              ).join('')}
+              ${starHtml}
             </div>
           </div>
           
@@ -708,13 +734,11 @@
               
               <div class="flex justify-center gap-2 mt-3">
                 <span class="bg-${mainTypeColor} text-white text-sm px-3 py-1 rounded-full">${pet.主}系</span>
-                ${pet.副 ? `<span class="bg-${typeColorMap[pet.副] || 'normal'} text-white text-sm px-3 py-1 rounded-full">${pet.副}系</span>` : ''}
+                ${hasSecondaryType(pet.副) ? `<span class="bg-${typeColorMap[pet.副] || 'normal'} text-white text-sm px-3 py-1 rounded-full">${pet.副}系</span>` : ''}
               </div>
               
               <div class="flex justify-center mt-2">
-                ${Array.from({length: 5}).map((_, i) => 
-                  i < pet.magic ? `<i class="fa fa-star text-yellow-400 text-lg"></i>` : `<i class="fa fa-star-o text-gray-300 text-lg"></i>`
-                ).join('')}
+                ${renderStarsHTML(pet.magic, 'text-lg')}
               </div>
             </div>
             
